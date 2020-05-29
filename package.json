@@ -1,0 +1,35 @@
+{
+  "name": "ascii2d",
+  "version": "1.0.0",
+  "author": "kokage <k0kag3.k0kag3+github@gmail.com>",
+  "scripts": {
+    "build": "tsc && shx rm dist/*.test.{d.ts,js}",
+    "test": "jest",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "bytes": "^3.1.0",
+    "fetch": "^1.1.0",
+    "form-data": "^3.0.0",
+    "jsdom": "^16.2.2",
+    "node-fetch": "^2.6.0"
+  },
+  "devDependencies": {
+    "@types/bytes": "^3.1.0",
+    "@types/jest": "^25.2.3",
+    "@types/jsdom": "^16.2.3",
+    "@types/node": "^14.0.5",
+    "@types/node-fetch": "^2.5.7",
+    "jest": "^26.0.1",
+    "shx": "^0.3.2",
+    "ts-jest": "^26.0.0",
+    "typescript": "^3.9.3"
+  },
+  "types": "dist/index.d.ts",
+  "main": "dist/index.js",
+  "files": [
+    "dist/*.js",
+    "dist/*.d.ts"
+  ],
+  "license": "Apache-2.0"
+}

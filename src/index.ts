@@ -58,60 +58,64 @@ function parseSearchResult(htmlString: string): Item[] {
   const items = Array.from(document.querySelectorAll('.item-box'))
     .slice(1)
     .map((item) => {
-      const hash = item.querySelector<HTMLDivElement>('.hash')!.textContent!;
-      const [size, fileType, fileSizeString] = item
-        .querySelector<HTMLSpanElement>('small.text-muted')!
-        .textContent!.split(' ');
-      const [width, height] = size.split('x').map((s) => parseInt(s));
-      const fileSize = bytes(fileSizeString);
+      try {
+        const hash = item.querySelector<HTMLDivElement>('.hash')!.textContent!;
+        const [size, fileType, fileSizeString] = item
+          .querySelector<HTMLSpanElement>('small.text-muted')!
+          .textContent!.split(' ');
+        const [width, height] = size.split('x').map((s) => parseInt(s));
+        const fileSize = bytes(fileSizeString);
 
-      const parsed = {
-        hash,
-        width,
-        height,
-        fileType: fileType.toLowerCase() as FileType,
-        fileSize,
-      } as Item;
+        const parsed = {
+          hash,
+          width,
+          height,
+          fileType: fileType.toLowerCase() as FileType,
+          fileSize,
+        } as Item;
 
-      const detailElement = item.querySelector('.detail-box');
-      if (detailElement && detailElement.textContent!.trim() !== '') {
-        const sourceElement = detailElement.querySelector('h6');
-        if (sourceElement) {
-          const anchors = Array.from(
-            sourceElement.querySelectorAll<HTMLAnchorElement>('a')!,
-          );
-          // amazon
-          if (anchors[0] && anchors[0].textContent === 'amazon') {
-            const source = {
-              type: 'amazon',
-              title: sourceElement.childNodes[0].textContent!.trim(),
-              url: anchors[0].href,
-            } as Source;
-            parsed.source = source;
+        const detailElement = item.querySelector('.detail-box');
+        if (detailElement && detailElement.textContent!.trim() !== '') {
+          const sourceElement = detailElement.querySelector('h6');
+          if (sourceElement) {
+            const anchors = Array.from(
+              sourceElement.querySelectorAll<HTMLAnchorElement>('a')!,
+            );
+            // amazon
+            if (anchors[0] && anchors[0].textContent === 'amazon') {
+              const source = {
+                type: 'amazon',
+                title: sourceElement.childNodes[0].textContent!.trim(),
+                url: anchors[0].href,
+              } as Source;
+              parsed.source = source;
+            } else {
+              const [titleElement, authorElement] = anchors;
+              const source = {
+                type: sourceElement
+                  .querySelector('small')!
+                  .textContent!.trim() as SourceType,
+                title: titleElement.textContent!,
+                url: titleElement.href,
+                author: {
+                  name: authorElement.textContent!,
+                  url: authorElement.href,
+                },
+              } as Source;
+              parsed.source = source;
+            }
           } else {
-            const [titleElement, authorElement] = anchors;
-            const source = {
-              type: sourceElement
-                .querySelector('small')!
-                .textContent!.trim() as SourceType,
-              title: titleElement.textContent!,
-              url: titleElement.href,
-              author: {
-                name: authorElement.textContent!,
-                url: authorElement.href,
-              },
-            } as Source;
-            parsed.source = source;
+            parsed.source = detailElement
+              .querySelector('.external')!
+              .textContent!.trim();
           }
-        } else {
-          parsed.source = detailElement
-            .querySelector('.external')!
-            .textContent!.trim();
         }
+        return parsed;
+      } catch (err) {
+        return undefined;
       }
-
-      return parsed;
-    });
+    })
+    .filter((s): s is Item => s !== undefined);
   return items;
 }
 

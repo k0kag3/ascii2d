@@ -131,10 +131,13 @@ async function getSearchHash(query: string | fs.ReadStream) {
     redirect: 'manual',
   });
 
-  const url = response.headers.get('location')!;
+  const url = response.headers.get('location');
+  if (!url) {
+    throw new Error(`Error occured. Maybe because image size is too large.`);
+  }
   const searchHash = url.match(/\/([^/]+)$/)?.[1];
   if (!searchHash) {
-    throw new Error(`Error occured. Maybe because image size is too large.`);
+    throw new Error(`Error occured. ${url}`);
   }
   return searchHash;
 }

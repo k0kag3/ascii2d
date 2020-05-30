@@ -19,7 +19,7 @@
     "@types/bytes": "^3.1.0",
     "@types/jest": "^25.2.3",
     "@types/jsdom": "^16.2.3",
-    "@types/node": "^14.0.5",
+    "@types/node": "^14.0.6",
     "@types/node-fetch": "^2.5.7",
     "jest": "^26.0.1",
     "shx": "^0.3.2",

@@ -6,21 +6,21 @@ import fetch from 'node-fetch';
 
 type SearchMode = 'color' | 'bovw';
 type FileType = 'jpeg' | 'png';
-type SourceType = 'pixiv' | 'twitter';
+type SourceType = 'pixiv' | 'twitter' | 'amazon' | 'ニコニコ静画';
 
-interface Author {
+export interface Author {
   name: string;
   url: string;
 }
 
-interface Source {
+export interface Source {
   type: SourceType;
   title: string;
   url: string;
-  author: Author;
+  author?: Author;
 }
 
-interface Item {
+export interface Item {
   hash: string;
   width: number;
   height: number;
@@ -29,7 +29,7 @@ interface Item {
   source: Source | string | undefined;
 }
 
-interface SearchResult {
+export interface SearchResult {
   url: string;
   items: Item[];
 }
@@ -73,27 +73,38 @@ function parseSearchResult(htmlString: string): Item[] {
         fileSize,
       } as Item;
 
-      const sourceElement = item.querySelector('.detail-box');
-      if (sourceElement) {
-        const definedSourceElement = sourceElement.querySelector('h6');
-        if (definedSourceElement) {
-          const [titleElement, authorElement] = Array.from(
+      const detailElement = item.querySelector('.detail-box');
+      if (detailElement) {
+        const sourceElement = detailElement.querySelector('h6');
+        if (sourceElement) {
+          const anchors = Array.from(
             sourceElement.querySelectorAll<HTMLAnchorElement>('a')!,
           );
-          const source = {
-            type: definedSourceElement
-              .querySelector('small')!
-              .textContent!.trim() as SourceType,
-            title: titleElement.textContent!,
-            url: titleElement.href,
-            author: {
-              name: authorElement.textContent!,
-              url: authorElement.href,
-            },
-          } as Source;
-          parsed.source = source;
+          // amazon
+          if (anchors[0] && anchors[0].textContent === 'amazon') {
+            const source = {
+              type: 'amazon',
+              title: sourceElement.childNodes[0].textContent!.trim(),
+              url: anchors[0].href,
+            } as Source;
+            parsed.source = source;
+          } else {
+            const [titleElement, authorElement] = anchors;
+            const source = {
+              type: sourceElement
+                .querySelector('small')!
+                .textContent!.trim() as SourceType,
+              title: titleElement.textContent!,
+              url: titleElement.href,
+              author: {
+                name: authorElement.textContent!,
+                url: authorElement.href,
+              },
+            } as Source;
+            parsed.source = source;
+          }
         } else {
-          parsed.source = sourceElement
+          parsed.source = detailElement
             .querySelector('.external')!
             .textContent!.trim();
         }

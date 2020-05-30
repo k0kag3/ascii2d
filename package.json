@@ -1,7 +1,7 @@
 {
   "name": "ascii2d",
   "description": "Ascii2d wrapper for Node.js",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "author": "kokage <k0kag3.k0kag3+github@gmail.com>",
   "scripts": {
     "build": "tsc && shx rm dist/*.test.{d.ts,js,js.map}",

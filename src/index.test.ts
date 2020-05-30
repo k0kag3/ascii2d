@@ -6,7 +6,7 @@ it.only('searchByUrl', async () => {
     'color',
   );
   console.log(result.url);
-  // console.log(JSON.stringify(result, null, 2));
+  console.log(JSON.stringify(result, null, 2));
 });
 
 it('searchByFile', async () => {

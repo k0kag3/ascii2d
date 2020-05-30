@@ -6,11 +6,23 @@ import fetch from 'node-fetch';
 
 type SearchMode = 'color' | 'bovw';
 type FileType = 'jpeg' | 'png';
-type SourceType = 'pixiv' | 'twitter' | 'amazon' | 'ニコニコ静画';
+type SourceType =
+  | 'pixiv'
+  | 'twitter'
+  | 'amazon'
+  | 'dlsite'
+  | 'tinami'
+  | 'ニコニコ静画';
 
 export interface Author {
   name: string;
   url: string;
+}
+
+export interface ExternalSource {
+  type: 'external';
+  ref: string;
+  content: string;
 }
 
 export interface Source {
@@ -22,11 +34,12 @@ export interface Source {
 
 export interface Item {
   hash: string;
+  thumbnailUrl: string;
   width: number;
   height: number;
   fileType: FileType;
   fileSize: number;
-  source: Source | string | undefined;
+  source: Source | ExternalSource | undefined;
 }
 
 export interface SearchResult {
@@ -53,69 +66,79 @@ async function getAuthToken() {
   return token;
 }
 
+function parseItem(detailBox: Element): Item {
+  const hash = detailBox.querySelector<HTMLDivElement>('.hash')!.textContent!;
+  const [size, fileType, fileSizeString] = detailBox
+    .querySelector<HTMLSpanElement>('small.text-muted')!
+    .textContent!.split(' ');
+  const thumbnailUrl =
+    'https://ascii2d.net' +
+    detailBox.querySelector<HTMLImageElement>('.image-box > img')!.src;
+  const [width, height] = size.split('x').map((s) => parseInt(s));
+  const fileSize = bytes(fileSizeString);
+
+  const item = {
+    hash,
+    thumbnailUrl,
+    width,
+    height,
+    fileType: fileType.toLowerCase() as FileType,
+    fileSize,
+  } as Item;
+
+  item.source = (() => {
+    const detailElement = detailBox.querySelector('.detail-box');
+    if (detailElement && detailElement.textContent!.trim() !== '') {
+      const infoHeader = detailElement.querySelector('.info-header');
+      const sourceElement = detailElement.querySelector('h6');
+      if (infoHeader) {
+        // external
+        return {
+          type: 'external',
+          ref: infoHeader.textContent,
+          content: detailElement
+            .querySelector('.external')!
+            .textContent!.trim(),
+        } as ExternalSource;
+      } else if (sourceElement) {
+        const anchors = Array.from(
+          sourceElement.querySelectorAll<HTMLAnchorElement>('a')!,
+        );
+        if (anchors[0] && anchors[0].textContent === 'amazon') {
+          // amazon
+          return {
+            type: 'amazon',
+            title: sourceElement.childNodes[0].textContent!.trim(),
+            url: anchors[0].href,
+          } as Source;
+        } else {
+          // typical
+          const [titleElement, authorElement] = anchors;
+          return {
+            type: sourceElement
+              .querySelector('small')!
+              .textContent!.trim() as SourceType,
+            title: titleElement.textContent!,
+            url: titleElement.href,
+            author: {
+              name: authorElement.textContent!,
+              url: authorElement.href,
+            },
+          } as Source;
+        }
+      }
+      return undefined;
+    }
+  })();
+
+  return item;
+}
+
 function parseSearchResult(htmlString: string): Item[] {
   const document = getDocument(htmlString);
   const items = Array.from(document.querySelectorAll('.item-box'))
     .slice(1)
-    .map((item) => {
-      try {
-        const hash = item.querySelector<HTMLDivElement>('.hash')!.textContent!;
-        const [size, fileType, fileSizeString] = item
-          .querySelector<HTMLSpanElement>('small.text-muted')!
-          .textContent!.split(' ');
-        const [width, height] = size.split('x').map((s) => parseInt(s));
-        const fileSize = bytes(fileSizeString);
-
-        const parsed = {
-          hash,
-          width,
-          height,
-          fileType: fileType.toLowerCase() as FileType,
-          fileSize,
-        } as Item;
-
-        const detailElement = item.querySelector('.detail-box');
-        if (detailElement && detailElement.textContent!.trim() !== '') {
-          const sourceElement = detailElement.querySelector('h6');
-          if (sourceElement) {
-            const anchors = Array.from(
-              sourceElement.querySelectorAll<HTMLAnchorElement>('a')!,
-            );
-            // amazon
-            if (anchors[0] && anchors[0].textContent === 'amazon') {
-              const source = {
-                type: 'amazon',
-                title: sourceElement.childNodes[0].textContent!.trim(),
-                url: anchors[0].href,
-              } as Source;
-              parsed.source = source;
-            } else {
-              const [titleElement, authorElement] = anchors;
-              const source = {
-                type: sourceElement
-                  .querySelector('small')!
-                  .textContent!.trim() as SourceType,
-                title: titleElement.textContent!,
-                url: titleElement.href,
-                author: {
-                  name: authorElement.textContent!,
-                  url: authorElement.href,
-                },
-              } as Source;
-              parsed.source = source;
-            }
-          } else {
-            parsed.source = detailElement
-              .querySelector('.external')!
-              .textContent!.trim();
-          }
-        }
-        return parsed;
-      } catch (err) {
-        return undefined;
-      }
-    })
-    .filter((s): s is Item => s !== undefined);
+    .map(parseItem);
   return items;
 }
 
@@ -133,12 +156,9 @@ async function getSearchHash(query: string | fs.ReadStream) {
 
   const url = response.headers.get('location');
   if (!url) {
-    throw new Error(`Error occured. Maybe because image size is too large.`);
+    throw new Error(`Image size is too large`);
   }
   const searchHash = url.match(/\/([^/]+)$/)?.[1];
-  if (!searchHash) {
-    throw new Error(`Error occured. ${url}`);
-  }
   return searchHash;
 }
 

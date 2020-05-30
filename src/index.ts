@@ -128,7 +128,10 @@ async function getSearchHash(query: string | fs.ReadStream) {
   });
 
   const url = response.headers.get('location')!;
-  const searchHash = url.match(/\/([^/]+)$/)![1];
+  const searchHash = url.match(/\/([^/]+)$/)?.[1];
+  if (!searchHash) {
+    throw new Error(`Error occured. Maybe because image size is too large.`);
+  }
   return searchHash;
 }
 

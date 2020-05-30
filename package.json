@@ -3,7 +3,7 @@
   "version": "1.1.0",
   "author": "kokage <k0kag3.k0kag3+github@gmail.com>",
   "scripts": {
-    "build": "tsc && shx rm dist/*.test.{d.ts,js}",
+    "build": "tsc && shx rm dist/*.test.{d.ts,js,js.map}",
     "clean": "shx rm -rf dist",
     "prepare": "npm run clean && npm run build",
     "test": "jest"
@@ -30,7 +30,8 @@
   "main": "dist/index.js",
   "files": [
     "dist/*.js",
-    "dist/*.d.ts"
+    "dist/*.d.ts",
+    "dist/*.js.map"
   ],
   "license": "Apache-2.0"
 }

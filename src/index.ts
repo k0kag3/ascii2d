@@ -74,7 +74,7 @@ function parseSearchResult(htmlString: string): Item[] {
       } as Item;
 
       const detailElement = item.querySelector('.detail-box');
-      if (detailElement) {
+      if (detailElement && detailElement.textContent!.trim() !== '') {
         const sourceElement = detailElement.querySelector('h6');
         if (sourceElement) {
           const anchors = Array.from(

@@ -116,7 +116,9 @@ function parseSource(itemBox: Element): Source | undefined {
     };
   }
 
+  if (anchors.length < 2) return;
   const [titleElement, authorElement] = anchors;
+
   return {
     type: h6.querySelector('small')!.textContent!.trim() as SourceType,
     title: titleElement.textContent!,

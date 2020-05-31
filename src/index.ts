@@ -181,6 +181,9 @@ async function getSearchHash(query: string | fs.ReadStream) {
     throw new Error(`Image size is too large`);
   }
   const searchHash = url.match(/\/([^/]+)$/)?.[1];
+  if (!searchHash) {
+    throw new Error(`Invalid image format`);
+  }
   return searchHash;
 }
 

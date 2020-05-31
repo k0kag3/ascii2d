@@ -24,7 +24,7 @@
     "@types/node-fetch": "^2.5.7",
     "jest": "^26.0.1",
     "shx": "^0.3.2",
-    "ts-jest": "^26.0.0",
+    "ts-jest": "^26.1.0",
     "typescript": "^3.9.3"
   },
   "types": "dist/index.d.ts",

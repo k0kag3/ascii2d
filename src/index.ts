@@ -4,9 +4,9 @@ import fs from 'fs';
 import {JSDOM} from 'jsdom';
 import fetch from 'node-fetch';
 
-type SearchMode = 'color' | 'bovw';
-type FileType = 'jpeg' | 'png';
-type SourceType =
+export type SearchMode = 'color' | 'bovw';
+export type FileType = 'jpeg' | 'png';
+export type SourceType =
   | 'pixiv'
   | 'twitter'
   | 'amazon'
@@ -19,17 +19,16 @@ export interface Author {
   url: string;
 }
 
-export interface ExternalSource {
-  type: 'external';
-  ref: string;
-  content: string;
-}
-
 export interface Source {
   type: SourceType;
   title: string;
   url: string;
   author?: Author;
+}
+
+export interface ExternalInfo {
+  ref: string;
+  content: Source | string;
 }
 
 export interface Item {
@@ -39,7 +38,8 @@ export interface Item {
   height: number;
   fileType: FileType;
   fileSize: number;
-  source: Source | ExternalSource | undefined;
+  source?: Source;
+  externalInfo?: ExternalInfo;
 }
 
 export interface SearchResult {
@@ -54,11 +54,11 @@ function getDocument(htmlString: string) {
   return document;
 }
 
-async function fetchDOM(endpoint: string) {
+async function fetchDOM(endpoint: string): Promise<Document> {
   return getDocument(await fetch(endpoint).then((res) => res.text()));
 }
 
-async function getAuthToken() {
+async function getAuthToken(): Promise<string> {
   const document = await fetchDOM('https://ascii2d.net/');
   const token = document.querySelector<HTMLMetaElement>(
     'meta[name="csrf-token"]',
@@ -66,14 +66,76 @@ async function getAuthToken() {
   return token;
 }
 
-function parseItem(detailBox: Element): Item {
-  const hash = detailBox.querySelector<HTMLDivElement>('.hash')!.textContent!;
-  const [size, fileType, fileSizeString] = detailBox
+function parseExternalSource(externalBox: Element): Source {
+  const [titleElement, authorElement] = Array.from(
+    externalBox.querySelectorAll<HTMLAnchorElement>('a')!,
+  );
+  return {
+    type: externalBox
+      .querySelector<HTMLImageElement>('img')!
+      .alt.toLowerCase() as SourceType,
+    title: titleElement.textContent!,
+    url: titleElement.href,
+    author: {
+      name: authorElement.textContent!,
+      url: authorElement.href,
+    },
+  };
+}
+
+function parseExternalInfo(itemBox: Element): ExternalInfo | undefined {
+  const infoHeader = itemBox.querySelector('.info-header');
+  if (!infoHeader) return;
+  const externalBox = itemBox.querySelector('.external');
+  if (!externalBox || !externalBox.textContent) return;
+
+  const maybeSource = externalBox.querySelectorAll('img,a,a').length === 3;
+
+  return {
+    type: 'external',
+    ref: infoHeader.textContent,
+    content: maybeSource
+      ? parseExternalSource(externalBox)
+      : externalBox.textContent.trim(),
+  } as ExternalInfo;
+}
+
+function parseSource(itemBox: Element): Source | undefined {
+  const detailBox = itemBox.querySelector('.detail-box');
+  if (!detailBox || detailBox.textContent!.trim() === '') return;
+  const h6 = detailBox.querySelector('h6');
+  if (!h6) return;
+
+  const anchors = Array.from(h6.querySelectorAll<HTMLAnchorElement>('a')!);
+  if (anchors[0] && anchors[0].textContent === 'amazon') {
+    // amazon
+    return {
+      type: 'amazon',
+      title: h6.childNodes[0].textContent!.trim(),
+      url: anchors[0].href,
+    };
+  }
+
+  const [titleElement, authorElement] = anchors;
+  return {
+    type: h6.querySelector('small')!.textContent!.trim() as SourceType,
+    title: titleElement.textContent!,
+    url: titleElement.href,
+    author: {
+      name: authorElement.textContent!,
+      url: authorElement.href,
+    },
+  };
+}
+
+function parseItem(itemBox: Element): Item {
+  const hash = itemBox.querySelector<HTMLDivElement>('.hash')!.textContent!;
+  const [size, fileType, fileSizeString] = itemBox
     .querySelector<HTMLSpanElement>('small.text-muted')!
     .textContent!.split(' ');
   const thumbnailUrl =
     'https://ascii2d.net' +
-    detailBox.querySelector<HTMLImageElement>('.image-box > img')!.src;
+    itemBox.querySelector<HTMLImageElement>('.image-box > img')!.src;
   const [width, height] = size.split('x').map((s) => parseInt(s));
   const fileSize = bytes(fileSizeString);
 
@@ -86,50 +148,8 @@ function parseItem(detailBox: Element): Item {
     fileSize,
   } as Item;
 
-  item.source = (() => {
-    const detailElement = detailBox.querySelector('.detail-box');
-    if (detailElement && detailElement.textContent!.trim() !== '') {
-      const infoHeader = detailElement.querySelector('.info-header');
-      const sourceElement = detailElement.querySelector('h6');
-      if (infoHeader) {
-        // external
-        return {
-          type: 'external',
-          ref: infoHeader.textContent,
-          content: detailElement
-            .querySelector('.external')!
-            .textContent!.trim(),
-        } as ExternalSource;
-      } else if (sourceElement) {
-        const anchors = Array.from(
-          sourceElement.querySelectorAll<HTMLAnchorElement>('a')!,
-        );
-        if (anchors[0] && anchors[0].textContent === 'amazon') {
-          // amazon
-          return {
-            type: 'amazon',
-            title: sourceElement.childNodes[0].textContent!.trim(),
-            url: anchors[0].href,
-          } as Source;
-        } else {
-          // typical
-          const [titleElement, authorElement] = anchors;
-          return {
-            type: sourceElement
-              .querySelector('small')!
-              .textContent!.trim() as SourceType,
-            title: titleElement.textContent!,
-            url: titleElement.href,
-            author: {
-              name: authorElement.textContent!,
-              url: authorElement.href,
-            },
-          } as Source;
-        }
-      }
-      return undefined;
-    }
-  })();
+  item.externalInfo = parseExternalInfo(itemBox);
+  item.source = parseSource(itemBox);
 
   return item;
 }

@@ -8,7 +8,7 @@
 [npm-downloads]: https://badgen.net/npm/dt/ascii2d
 [npm-url]: https://npmjs.org/package/ascii2d
 [docs]: https://badgen.net/badge/documentation/available/purple
-[docs-url]: https://k0kag3.github.io/ascii2d/modules/_ascii2d_
+[docs-url]: https://k0kag3.github.io/ascii2d/modules/_ascii2d_.html
 
 > ascii2d wrapper for Node.js.
 

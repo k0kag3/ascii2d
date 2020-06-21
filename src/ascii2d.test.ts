@@ -1,4 +1,4 @@
-import * as lib from './index';
+import * as lib from './ascii2d';
 
 it.only('searchByUrl', async () => {
   const result = await lib.searchByUrl(

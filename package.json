@@ -8,8 +8,8 @@
     "clean": "shx rm -rf dist",
     "prepublish": "npm run clean && npm run build",
     "test": "jest",
-    "typedoc": "typedoc --excludePrivate --excludeExternals --excludeNotExported --exclude '**/*.test.*' --mode modules --out docs src/ascii2d.ts",
-    "docs": "yarn typedoc && gh-pages docs"
+    "typedoc": "typedoc --excludePrivate --excludeExternals --excludeNotExported --exclude '**/*.test.*' --mode modules --out docs src/ascii2d.ts && shx touch docs/.nojekyll",
+    "docs": "yarn typedoc && gh-pages -d docs --dotfiles"
   },
   "dependencies": {
     "bytes": "^3.1.0",
